@@ -1,0 +1,111 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* ─── React Flow overrides ────────────────────────────────────────────────── */
+.react-flow__background {
+  background-color: #0f1117;
+}
+
+.react-flow__background pattern circle {
+  fill: #2d3548;
+}
+
+.react-flow__minimap {
+  background: #161b27 !important;
+  border: 1px solid #2d3548;
+  border-radius: 8px;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(99, 102, 241, 0.1) !important;
+}
+
+.react-flow__controls {
+  background: #161b27;
+  border: 1px solid #2d3548;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.react-flow__controls-button {
+  background: #161b27;
+  border-bottom: 1px solid #2d3548;
+  color: #94a3b8;
+  fill: #94a3b8;
+}
+
+.react-flow__controls-button:hover {
+  background: #1e2535;
+  color: #e2e8f0;
+  fill: #e2e8f0;
+}
+
+.react-flow__edge-path {
+  stroke: #3d4a5f;
+  stroke-width: 1.5;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #6366f1;
+}
+
+.react-flow__edge-text {
+  fill: #94a3b8;
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+}
+
+.react-flow__handle {
+  background: #6366f1;
+  border: 2px solid #0f1117;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.react-flow__node:hover .react-flow__handle,
+.react-flow__node.selected .react-flow__handle {
+  opacity: 1;
+}
+
+.react-flow__selection {
+  background: rgba(99, 102, 241, 0.05);
+  border: 1px dashed #6366f1;
+}
+
+/* ─── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #161b27;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2d3548;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3d4a5f;
+}
+
+/* ─── Focus ring ───────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Transitions ───────────────────────────────────────────────────────────── */
+* {
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 100ms;
+  transition-timing-function: ease-out;
+}

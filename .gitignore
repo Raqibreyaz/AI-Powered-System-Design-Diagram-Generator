@@ -1,0 +1,32 @@
+node_modules/
+dist/
+build/
+.env
+*.env.local
+
+# Prisma
+prisma/migrations/**/migration.sql
+*.db
+*.sqlite
+
+# Uploads
+uploads/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Build artifacts
+*.tsbuildinfo
+
+# Test coverage
+coverage/
