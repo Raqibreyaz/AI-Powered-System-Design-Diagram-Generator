@@ -22,9 +22,34 @@ const DEFAULT_NODE_WIDTH = 160;
 const DEFAULT_NODE_HEIGHT = 60;
 const GROUP_PADDING = 40;
 
-export async function applyELKLayout(dsl: DiagramDSLOutput): Promise<NormalisedDiagramDSL> {
-  const algorithm = dsl.diagramType === "architecture" ? "layered" : "layered";
-  const direction = dsl.diagramType === "sequence" ? "DOWN" : "RIGHT";
+export interface ELKLayoutOptions {
+  direction?: "RIGHT" | "DOWN" | "LEFT" | "UP";
+  spacing?: "compact" | "balanced" | "spacious";
+}
+
+export async function applyELKLayout(
+  dsl: DiagramDSLOutput,
+  options?: ELKLayoutOptions
+): Promise<NormalisedDiagramDSL> {
+  const algorithm = "layered";
+  
+  let direction = dsl.diagramType === "sequence" ? "DOWN" : "RIGHT";
+  if (options?.direction) {
+    direction = options.direction;
+  }
+
+  let nodeSpacing = "60";
+  let layerSpacing = "80";
+  if (options?.spacing) {
+    if (options.spacing === "compact") {
+      nodeSpacing = "40";
+      layerSpacing = "60";
+    } else if (options.spacing === "spacious") {
+      nodeSpacing = "100";
+      layerSpacing = "130";
+    }
+  }
+
 
   // Build ELK node map — groups become parent nodes in ELK
   const groupChildSet = new Set(dsl.groups.flatMap((g) => g.children));
@@ -85,9 +110,9 @@ export async function applyELKLayout(dsl: DiagramDSLOutput): Promise<NormalisedD
     layoutOptions: {
       "elk.algorithm": algorithm,
       "elk.direction": direction,
-      "elk.spacing.nodeNode": "60",
-      "elk.layered.spacing.nodeNodeBetweenLayers": "80",
-      "elk.spacing.componentComponent": "60",
+      "elk.spacing.nodeNode": nodeSpacing,
+      "elk.layered.spacing.nodeNodeBetweenLayers": layerSpacing,
+      "elk.spacing.componentComponent": nodeSpacing,
       "elk.layered.unnecessaryBendpoints": "true",
     },
     children: topLevelNodes,

@@ -3,13 +3,13 @@
  */
 
 import { useReactFlow } from "@xyflow/react";
-import { Undo2, Redo2, ZoomIn, ZoomOut, Maximize2, Save, Download } from "lucide-react";
-import { toPng, toSvg } from "html-to-image";
+import { Undo2, Redo2, ZoomIn, ZoomOut, Maximize2, Save } from "lucide-react";
 import { useDiagramStore } from "../../../store/diagram.store";
 import { useUIStore } from "../../../store/ui.store";
 import { diagramService } from "../../../services/diagram.service";
 import { Button } from "../../ui/Button";
 import { ExportMenu } from "../../export/ExportMenu";
+import { BeautifyPopover } from "./BeautifyPopover";
 import type { RefObject } from "react";
 
 interface CanvasToolBarProps {
@@ -76,6 +76,8 @@ export function CanvasToolBar({ canvasRef }: CanvasToolBarProps) {
 
       <ExportMenu canvasRef={canvasRef} />
 
+      <BeautifyPopover />
+
       <Button
         variant="ghost"
         size="sm"
@@ -89,3 +91,4 @@ export function CanvasToolBar({ canvasRef }: CanvasToolBarProps) {
     </div>
   );
 }
+

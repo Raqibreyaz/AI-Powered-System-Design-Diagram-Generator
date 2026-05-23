@@ -7,6 +7,7 @@ import type {
   GenerateDiagramResponse,
   Diagram,
   DiagramVersion,
+  LayoutDiagramRequest,
 } from "@diagram-forge/shared";
 
 export interface DiagramSummary {
@@ -58,5 +59,8 @@ export const diagramService = {
 
   exportSvg: (id: string, svgContent: string) =>
     api.post<unknown>(`/diagrams/${id}/export`, { format: "svg", svgContent }),
+
+  beautify: (body: LayoutDiagramRequest) =>
+    api.post<{ dslJson: any }>("/diagrams/layout", body),
 };
 

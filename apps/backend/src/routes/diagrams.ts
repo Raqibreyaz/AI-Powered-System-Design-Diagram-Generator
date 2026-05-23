@@ -20,6 +20,7 @@ import {
   RegenerateSelectionRequestSchema,
   PatchDiagramRequestSchema,
   RestoreVersionRequestSchema,
+  LayoutDiagramRequestSchema,
 } from "@diagram-forge/shared";
 import {
   generateFromPrompt,
@@ -27,6 +28,7 @@ import {
   refineSelection,
 } from "../ai/ai.service.js";
 import { buildProjectGraph, serialiseProjectGraph } from "../parsers/project-graph.js";
+import { applyELKLayout } from "../dsl/layout.js";
 import { logger } from "../utils/logger.js";
 
 export async function diagramRoutes(app: FastifyInstance): Promise<void> {
@@ -357,6 +359,18 @@ export async function diagramRoutes(app: FastifyInstance): Promise<void> {
 
     return reply.send({ diagram: restored.toJSON() });
   });
+
+  // ─── POST /layout ────────────────────────────────────────────────────────
+
+  app.post(
+    "/layout",
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const body = LayoutDiagramRequestSchema.parse(request.body);
+      const layoutedDSL = await applyELKLayout(body.dslJson, body.options);
+      return reply.send({ dslJson: layoutedDSL });
+    }
+  );
 }
 
 /** Convert diagram record to API response shape */

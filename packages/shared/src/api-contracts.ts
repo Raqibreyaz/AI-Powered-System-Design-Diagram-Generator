@@ -157,6 +157,18 @@ export const ApiErrorSchema = z.object({
   details: z.unknown().optional(),
 });
 
+// ─── Layout ───────────────────────────────────────────────────────────────────
+
+export const LayoutDiagramRequestSchema = z.object({
+  dslJson: NormalisedDiagramDSLSchema,
+  options: z
+    .object({
+      direction: z.enum(["RIGHT", "DOWN", "LEFT", "UP"]).optional(),
+      spacing: z.enum(["compact", "balanced", "spacious"]).optional(),
+    })
+    .optional(),
+});
+
 // ─── Inferred types ───────────────────────────────────────────────────────────
 
 export type DemoLoginRequest = z.infer<typeof DemoLoginRequestSchema>;
@@ -173,3 +185,5 @@ export type DiagramVersion = z.infer<typeof DiagramVersionSchema>;
 export type ExportRequest = z.infer<typeof ExportRequestSchema>;
 export type UploadedFile = z.infer<typeof UploadedFileSchema>;
 export type ApiError = z.infer<typeof ApiErrorSchema>;
+export type LayoutDiagramRequest = z.infer<typeof LayoutDiagramRequestSchema>;
+
