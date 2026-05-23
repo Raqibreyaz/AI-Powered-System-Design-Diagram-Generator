@@ -11,6 +11,25 @@ import type { FlowNodeData, FlowEdgeData } from "../dsl/dsl-to-flow";
 
 const HISTORY_LIMIT = 50;
 
+// Node type → display color map (mirrors Tailwind config)
+const NODE_COLORS: Record<string, string> = {
+  service: "#3b82f6", database: "#8b5cf6", queue: "#f59e0b",
+  storage: "#10b981", gateway: "#6366f1", cdn: "#14b8a6",
+  cache: "#f97316", client: "#64748b", loadbalancer: "#0ea5e9",
+  monitor: "#ec4899", decision: "#eab308", external: "#94a3b8", generic: "#6b7280",
+};
+
+const NODE_ICONS: Record<string, string> = {
+  service: "server", database: "database", queue: "shuffle",
+  storage: "hard-drive", gateway: "layers", cdn: "globe",
+  cache: "zap", client: "user", loadbalancer: "activity",
+  monitor: "monitor", decision: "git-branch", external: "external-link", generic: "box",
+};
+
+function generateNodeId(): string {
+  return `node_${Math.random().toString(36).slice(2, 9)}`;
+}
+
 export interface DiagramState {
   // Active diagram metadata
   diagramId: string | null;
@@ -46,6 +65,8 @@ export interface DiagramState {
   onEdgesChange: (changes: EdgeChange<Edge<FlowEdgeData>>[]) => void;
   onSelectionChange: (params: { nodes: Node[]; edges: Edge[] }) => void;
   updateNodeLabel: (nodeId: string, label: string) => void;
+  addNode: (label: string, nodeType: string, position: { x: number; y: number }, technology?: string) => void;
+  deleteSelected: () => void;
   setViewport: (viewport: { x: number; y: number; zoom: number }) => void;
   setGenerating: (v: boolean) => void;
   setGenerationError: (err: string | null) => void;
@@ -148,6 +169,132 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
       return {
         nodes: updatedNodes,
         dsl: updatedDsl,
+      };
+    });
+  },
+
+  addNode: (label, nodeType, position, technology) => {
+    set((state) => {
+      const id = generateNodeId();
+      const color = NODE_COLORS[nodeType] ?? "#6b7280";
+      const icon = NODE_ICONS[nodeType] ?? "box";
+
+      // Add to React Flow nodes
+      const newFlowNode: Node<FlowNodeData> = {
+        id,
+        type: "archNode",
+        position,
+        data: {
+          label,
+          nodeType,
+          technology,
+          confidence: 1.0,
+          color,
+          icon,
+          sourceRefs: [],
+          metadata: { _color: color, _icon: icon },
+        },
+        width: 160,
+        height: 60,
+      };
+
+      // Add to DSL
+      if (!state.dsl) {
+        // No existing diagram — create a minimal one
+        const newDsl: NormalisedDiagramDSL = {
+          schemaVersion: "1.0",
+          diagramType: "architecture",
+          title: "My Diagram",
+          summary: "Manually created diagram",
+          confidence: 1.0,
+          nodes: [{
+            id,
+            type: nodeType as any,
+            label,
+            technology,
+            confidence: 1.0,
+            position,
+            dimensions: { width: 160, height: 60 },
+            sourceRefs: [],
+            metadata: { _color: color, _icon: icon },
+          }],
+          edges: [],
+          groups: [],
+          annotations: [],
+          unresolvedItems: [],
+        };
+
+        const newHistory = [...state.history.slice(0, state.historyIndex + 1), newDsl].slice(-HISTORY_LIMIT);
+        return {
+          dsl: newDsl,
+          nodes: [newFlowNode],
+          edges: [],
+          history: newHistory,
+          historyIndex: newHistory.length - 1,
+          diagramTitle: "My Diagram",
+        };
+      }
+
+      const updatedDsl: NormalisedDiagramDSL = {
+        ...state.dsl,
+        nodes: [
+          ...state.dsl.nodes,
+          {
+            id,
+            type: nodeType as any,
+            label,
+            technology,
+            confidence: 1.0,
+            position,
+            dimensions: { width: 160, height: 60 },
+            sourceRefs: [],
+            metadata: { _color: color, _icon: icon },
+          },
+        ],
+      };
+
+      const newHistory = [...state.history.slice(0, state.historyIndex + 1), updatedDsl].slice(-HISTORY_LIMIT);
+      return {
+        dsl: updatedDsl,
+        nodes: [...state.nodes, newFlowNode],
+        history: newHistory,
+        historyIndex: newHistory.length - 1,
+      };
+    });
+  },
+
+  deleteSelected: () => {
+    set((state) => {
+      if (!state.dsl) return {};
+      const { selectedNodeIds, selectedEdgeIds } = state;
+      if (selectedNodeIds.length === 0 && selectedEdgeIds.length === 0) return {};
+
+      const nodeIdSet = new Set(selectedNodeIds);
+      const edgeIdSet = new Set(selectedEdgeIds);
+
+      const updatedDsl: NormalisedDiagramDSL = {
+        ...state.dsl,
+        nodes: state.dsl.nodes.filter((n) => !nodeIdSet.has(n.id)),
+        edges: state.dsl.edges.filter(
+          (e) => !edgeIdSet.has(e.id) && !nodeIdSet.has(e.from) && !nodeIdSet.has(e.to)
+        ),
+        groups: state.dsl.groups
+          .map((g) => ({ ...g, children: g.children.filter((c) => !nodeIdSet.has(c)) }))
+          .filter((g) => g.children.length > 0),
+      };
+
+      const newHistory = [...state.history.slice(0, state.historyIndex + 1), updatedDsl].slice(-HISTORY_LIMIT);
+
+      return {
+        dsl: updatedDsl,
+        nodes: state.nodes.filter((n) => !nodeIdSet.has(n.id)),
+        edges: state.edges.filter(
+          (e) => !edgeIdSet.has(e.id) && !nodeIdSet.has(e.source) && !nodeIdSet.has(e.target)
+        ),
+        selectedNodeIds: [],
+        selectedEdgeIds: [],
+        history: newHistory,
+        historyIndex: newHistory.length - 1,
       };
     });
   },

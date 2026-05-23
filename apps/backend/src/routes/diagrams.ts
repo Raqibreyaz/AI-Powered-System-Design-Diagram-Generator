@@ -225,6 +225,35 @@ export async function diagramRoutes(app: FastifyInstance): Promise<void> {
     }
   );
 
+  // ─── GET / — list all user's diagrams ───────────────────────────────────
+
+  app.get("/", { preHandler: [authenticate] }, async (request, reply) => {
+    const req = request as AuthenticatedRequest;
+    const query = z.object({
+      projectId: z.string().optional(),
+      limit: z.coerce.number().int().min(1).max(100).default(50),
+      skip: z.coerce.number().int().min(0).default(0),
+    }).parse(request.query);
+
+    const filter: Record<string, unknown> = {};
+    if (query.projectId) {
+      filter["projectId"] = query.projectId;
+    }
+
+    const diagrams = await Diagram.find(filter)
+      .sort({ updatedAt: -1 })
+      .skip(query.skip)
+      .limit(query.limit)
+      .select("id title diagramType currentVersion projectId createdAt updatedAt");
+
+    const total = await Diagram.countDocuments(filter);
+
+    return reply.send({
+      diagrams: diagrams.map((d) => d.toJSON()),
+      total,
+    });
+  });
+
   // ─── GET /:id ─────────────────────────────────────────────────────────────
 
   app.get("/:id", { preHandler: [authenticate] }, async (request, reply) => {
@@ -232,6 +261,17 @@ export async function diagramRoutes(app: FastifyInstance): Promise<void> {
     const diagram = await Diagram.findById(id);
     if (!diagram) throw new AppError("Diagram not found", ErrorCodes.NOT_FOUND, 404);
     return reply.send({ diagram: diagram.toJSON() });
+  });
+
+  // ─── DELETE /:id ──────────────────────────────────────────────────────────
+
+  app.delete("/:id", { preHandler: [authenticate] }, async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const diagram = await Diagram.findByIdAndDelete(id);
+    if (!diagram) throw new AppError("Diagram not found", ErrorCodes.NOT_FOUND, 404);
+    // Clean up versions too
+    await DiagramVersion.deleteMany({ diagramId: id });
+    return reply.status(204).send();
   });
 
   // ─── PATCH /:id ───────────────────────────────────────────────────────────

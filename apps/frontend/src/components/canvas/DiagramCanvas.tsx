@@ -1,9 +1,10 @@
 /**
  * DiagramCanvas — the main React Flow wrapper.
- * Manages node/edge types, keyboard shortcuts, and canvas export.
+ * Manages node/edge types, keyboard shortcuts, context menu,
+ * manual add-node flow, and the refine-selection floating panel.
  */
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -11,6 +12,8 @@ import {
   MiniMap,
   BackgroundVariant,
   Panel,
+  type ReactFlowInstance,
+  type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -22,6 +25,9 @@ import { SequenceNode } from "./nodes/SequenceNode";
 import { LabeledEdge } from "./edges/LabeledEdge";
 import { CanvasToolBar } from "./controls/ToolBar";
 import { EmptyCanvas } from "./EmptyCanvas";
+import { CanvasContextMenu, type ContextMenuState } from "./CanvasContextMenu";
+import { AddNodeDialog } from "./AddNodeDialog";
+import { RefineSelectionPanel } from "./RefineSelectionPanel";
 
 const nodeTypes = {
   archNode: ArchNode,
@@ -35,24 +41,66 @@ const edgeTypes = {
 
 export function DiagramCanvas() {
   const {
-    nodes,
-    edges,
-    onNodesChange,
-    onEdgesChange,
-    onSelectionChange,
-    setViewport,
-    dsl,
-    isGenerating,
+    nodes, edges, onNodesChange, onEdgesChange, onSelectionChange,
+    setViewport, dsl, isGenerating, selectedNodeIds, selectedEdgeIds,
+    addNode, deleteSelected,
   } = useDiagramStore();
 
   const { toggleRightPanel, setRightPanelTab } = useUIStore();
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const rfRef = useRef<ReactFlowInstance | null>(null);
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  // Add node dialog state
+  const [addNodePos, setAddNodePos] = useState<{ x: number; y: number } | null>(null);
 
   const handleNodeClick = useCallback(() => {
     setRightPanelTab("inspector");
-    toggleRightPanel();
+    if (!useUIStore.getState().rightPanelOpen) toggleRightPanel();
   }, [setRightPanelTab, toggleRightPanel]);
+
+  const handlePaneContextMenu = useCallback(
+    (event: MouseEvent | React.MouseEvent) => {
+      event.preventDefault();
+      if (!rfRef.current) return;
+      const { x: flowX, y: flowY } = rfRef.current.screenToFlowPosition({
+        x: (event as MouseEvent).clientX,
+        y: (event as MouseEvent).clientY,
+      });
+      setContextMenu({
+        x: (event as MouseEvent).clientX,
+        y: (event as MouseEvent).clientY,
+        flowX,
+        flowY,
+      });
+    },
+    []
+  );
+
+  const handleNodeContextMenu: NodeMouseHandler = useCallback(
+    (event, node) => {
+      event.preventDefault();
+      if (!rfRef.current) return;
+      const { x: flowX, y: flowY } = rfRef.current.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      setContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        flowX,
+        flowY,
+        targetNodeId: node.id,
+      });
+    },
+    []
+  );
+
+  const handleAddNodeFromContext = useCallback((flowX: number, flowY: number) => {
+    setAddNodePos({ x: flowX, y: flowY });
+  }, []);
 
   const isEmpty = !dsl || nodes.length === 0;
 
@@ -66,6 +114,10 @@ export function DiagramCanvas() {
         onSelectionChange={onSelectionChange}
         onNodeClick={handleNodeClick}
         onMoveEnd={(_event, viewport) => setViewport(viewport)}
+        onPaneContextMenu={handlePaneContextMenu}
+        onNodeContextMenu={handleNodeContextMenu}
+        onPaneClick={() => setContextMenu(null)}
+        onInit={(instance) => { rfRef.current = instance as unknown as ReactFlowInstance; }}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -75,6 +127,7 @@ export function DiagramCanvas() {
         deleteKeyCode="Delete"
         multiSelectionKeyCode="Shift"
         selectionKeyCode="Shift"
+        connectOnClick={false}
         proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
@@ -96,6 +149,31 @@ export function DiagramCanvas() {
           </Panel>
         )}
       </ReactFlow>
+
+      {/* Refine selection floating bar */}
+      <RefineSelectionPanel />
+
+      {/* Right-click context menu */}
+      {contextMenu && (
+        <CanvasContextMenu
+          state={contextMenu}
+          selectedCount={selectedNodeIds.length + selectedEdgeIds.length}
+          onAddNode={handleAddNodeFromContext}
+          onDeleteSelected={deleteSelected}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* Add node dialog */}
+      {addNodePos && (
+        <AddNodeDialog
+          position={addNodePos}
+          onConfirm={(label, type, technology) =>
+            addNode(label, type, addNodePos, technology)
+          }
+          onClose={() => setAddNodePos(null)}
+        />
+      )}
     </div>
   );
 }

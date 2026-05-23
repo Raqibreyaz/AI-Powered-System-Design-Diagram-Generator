@@ -2,7 +2,7 @@ import { useDiagramStore } from "../../store/diagram.store";
 import { Spinner } from "../ui/Spinner";
 
 export function BottomPanel() {
-  const { isGenerating, generationError, dsl } = useDiagramStore();
+  const { isGenerating, generationError, dsl, diagramVersion, selectedNodeIds } = useDiagramStore();
 
   return (
     <div className="h-8 flex items-center px-3 gap-3 bg-surface-1 border-t border-border text-xs text-slate-500 select-none">
@@ -15,14 +15,17 @@ export function BottomPanel() {
         <span className="text-danger">⚠ {generationError}</span>
       ) : dsl ? (
         <>
-          <span className="text-slate-600">v{}</span>
+          <span className="text-slate-600">v{diagramVersion}</span>
           <span>{dsl.nodes.length} nodes · {dsl.edges.length} edges</span>
+          {selectedNodeIds.length > 0 && (
+            <span className="text-accent">{selectedNodeIds.length} selected</span>
+          )}
           <span className="ml-auto font-mono text-slate-600">
             {dsl.diagramType} · confidence {Math.round(dsl.confidence * 100)}%
           </span>
         </>
       ) : (
-        <span className="text-slate-600">Ready</span>
+        <span className="text-slate-600">Ready — enter a prompt to generate</span>
       )}
     </div>
   );

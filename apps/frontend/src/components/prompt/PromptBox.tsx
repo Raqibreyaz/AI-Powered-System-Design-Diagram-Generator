@@ -4,11 +4,13 @@
  * and invokes the generate-from-prompt flow.
  */
 
-import { useState } from "react";
-import { Wand2, ChevronDown, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Wand2, Info, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/Button";
 import { useDiagramStore } from "../../store/diagram.store";
 import { useUIStore } from "../../store/ui.store";
+import { useProjectStore } from "../../store/project.store";
 import { diagramService } from "../../services/diagram.service";
 import type { DiagramType } from "@diagram-forge/shared";
 
@@ -18,6 +20,7 @@ const SAMPLE_PROMPTS = [
   "Sequence diagram for OIDC discovery and user login",
   "Microservices e-commerce platform with API gateway, order, product, and payment services",
   "Real-time chat system with WebSockets, Redis pub/sub, and PostgreSQL",
+  "CI/CD pipeline with GitHub Actions, Docker, and Kubernetes",
 ];
 
 const DIAGRAM_TYPES: { value: DiagramType; label: string; description: string }[] = [
@@ -33,8 +36,19 @@ export function PromptBox() {
   const [diagramType, setDiagramType] = useState<DiagramType>("architecture");
   const [complexity, setComplexity] = useState<Complexity>("medium");
 
-  const { setGenerating, setGenerationError, loadDiagram, setUnresolvedItems, isGenerating } = useDiagramStore();
+  const navigate = useNavigate();
+  const { setGenerating, setGenerationError, loadDiagram, setUnresolvedItems, isGenerating, dsl, diagramId } = useDiagramStore();
   const { showToast } = useUIStore();
+  const { activeProject } = useProjectStore();
+
+  // Listen for starter prompt injected from LandingPage via sessionStorage event
+  useEffect(() => {
+    const handler = (e: CustomEvent<string>) => {
+      setPrompt(e.detail);
+    };
+    window.addEventListener("df:starter-prompt", handler as EventListener);
+    return () => window.removeEventListener("df:starter-prompt", handler as EventListener);
+  }, []);
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
@@ -45,6 +59,7 @@ export function PromptBox() {
         prompt: prompt.trim(),
         diagramType,
         complexity,
+        projectId: activeProject?.id,
       });
 
       loadDiagram(res.diagram.id, res.diagram.dslJson, {
@@ -55,10 +70,13 @@ export function PromptBox() {
 
       setUnresolvedItems(res.unresolvedItems);
 
+      // Update URL so the diagram persists on reload
+      navigate(`/workspace/${res.diagram.id}`, { replace: true });
+
       if (res.unresolvedItems.length > 0) {
         showToast(`Generated with ${res.unresolvedItems.length} unresolved items`, "info");
       } else {
-        showToast("Diagram generated successfully", "success");
+        showToast("Diagram generated ✓", "success");
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Generation failed";
@@ -68,7 +86,7 @@ export function PromptBox() {
   };
 
   return (
-    <div className="p-3 bg-surface-1 border-b border-border space-y-2 animate-fade-in">
+    <div className="p-3 space-y-2 animate-fade-in">
       {/* Diagram type selector */}
       <div className="flex gap-1">
         {DIAGRAM_TYPES.map((t) => (
@@ -98,7 +116,7 @@ export function PromptBox() {
             }
           }}
           placeholder="Describe your system design…"
-          className="w-full h-24 resize-none bg-surface-2 border border-border rounded text-sm text-slate-200 placeholder-slate-600 p-2.5 pr-10 focus:outline-none focus:border-accent/60 focus:bg-surface-3 transition-colors"
+          className="w-full h-28 resize-none bg-surface-2 border border-border rounded text-sm text-slate-200 placeholder-slate-600 p-2.5 pr-9 focus:outline-none focus:border-accent/60 focus:bg-surface-3 transition-colors leading-relaxed"
           disabled={isGenerating}
         />
         <button
@@ -108,6 +126,7 @@ export function PromptBox() {
             if (sample) setPrompt(sample);
           }}
           title="Load a sample prompt"
+          type="button"
         >
           <Info size={13} />
         </button>
@@ -118,7 +137,7 @@ export function PromptBox() {
         <select
           value={complexity}
           onChange={(e) => setComplexity(e.target.value as Complexity)}
-          className="flex-1 text-xs bg-surface-2 border border-border text-slate-300 rounded px-2 py-1.5 focus:outline-none focus:border-accent/60"
+          className="flex-1 text-xs bg-surface-2 border border-border text-slate-300 rounded px-2 py-1.5 focus:outline-none focus:border-accent/60 cursor-pointer"
           disabled={isGenerating}
         >
           <option value="simple">Simple</option>
@@ -133,11 +152,22 @@ export function PromptBox() {
           loading={isGenerating}
           disabled={!prompt.trim()}
           className="flex-shrink-0"
+          id="generate-btn"
         >
           <Wand2 size={13} />
           {isGenerating ? "Generating…" : "Generate"}
         </Button>
       </div>
+
+      {/* Refine existing diagram — shown when there's already a diagram */}
+      {dsl && diagramId && !isGenerating && (
+        <div className="pt-1 border-t border-border">
+          <p className="text-[10px] text-slate-500 mb-1.5 flex items-center gap-1">
+            <RefreshCw size={9} />
+            Regenerate entire diagram with new prompt
+          </p>
+        </div>
+      )}
 
       <p className="text-[10px] text-slate-600">⌘ Enter to generate</p>
     </div>

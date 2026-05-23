@@ -1,2 +1,13 @@
-- user can give any type of prompt, which may generate invalid response format
-- user not able to see it's generated diagrams
+ISSUES:
+  - user can give any type of prompt, which may generate invalid response format
+  - sending prompt in main prompt box considers a fresh new input to generate a new diagram which fails when user wants modifications in the overall diagram
+  - giving further prompts to edit the selected node(s) generates invalid response format by AI
+  - edit node prompt box and right side bar is ruining the UX as they appear constantly whenever node is touched
+  - user not able to create the whole diagram manually, creating different various kind of nodes and connecting them and grouping them
+  - user not able to edit the diagram manually, editing node's name and editing or removing the edge and moving nodes to another grouped nodes
+  - no option to beautify the nodes by position formatting which can make it more readable
+
+DONE:
+  - no feature to create a project
+    - therefore can't upload files
+  - user not able to see all it's generated diagrams
